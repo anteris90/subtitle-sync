@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subtitle Sync</title>
+  <style>
+    :root { color-scheme: dark; --bg:#10151d; --panel:#18212d; --field:#0d131c; --line:#304055; --text:#eef4fb; --muted:#aab8c9; --accent:#52b6ff; --good:#65d49c; --warn:#ffcc66; }
+    * { box-sizing:border-box; } body { margin:0; background:linear-gradient(130deg,#10151d,#172437); color:var(--text); font:15px/1.45 "Segoe UI",system-ui,sans-serif; }
+    main { max-width:1180px; margin:auto; padding:28px 20px 50px; } h1 { margin:0 0 4px; font-size:28px; } h2 { font-size:17px; margin:0 0 14px; } p { color:var(--muted); margin:4px 0 18px; }
+    .grid { display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); } .card { background:rgba(24,33,45,.94); border:1px solid var(--line); border-radius:12px; padding:18px; box-shadow:0 8px 30px #0003; }
+    label { display:block; color:var(--muted); font-size:13px; margin:11px 0 5px; } input, button, select { font:inherit; } input[type=file], input[type=number] { width:100%; background:var(--field); border:1px solid var(--line); border-radius:7px; color:var(--text); padding:9px; }
+    input[type=number] { max-width:220px; } button { border:0; border-radius:7px; cursor:pointer; padding:10px 14px; font-weight:600; background:var(--accent); color:#06131f; } button.secondary { background:#314157; color:var(--text); } button.good { background:var(--good); color:#092016; } button:disabled { opacity:.45; cursor:not-allowed; }
+    .row { display:flex; align-items:end; gap:12px; flex-wrap:wrap; } .row > div { min-width:145px; flex:1; } .note { font-size:13px; color:var(--muted); } .status { min-height:23px; color:var(--good); margin-top:12px; } .warning { color:var(--warn); }
+    .wide { grid-column:1/-1; } .mode-switch { display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 10px; } .mode-switch button.active { background:var(--accent); color:#06131f; } [data-mode].hidden { display:none; } .preview-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .preview-grid.audio-only { grid-template-columns:1fr; } .preview-title { margin:12px 0 6px; color:var(--muted); font-size:13px; } .preview { max-height:370px; overflow:auto; background:var(--field); border:1px solid var(--line); border-radius:8px; padding:7px; }
+    .progress-track { height:8px; overflow:hidden; margin-top:8px; border-radius:4px; background:var(--line); } .progress-track[hidden] { display:none; } .progress-indicator { width:30%; height:100%; border-radius:inherit; background:var(--accent); animation:sync-progress 1.2s ease-in-out infinite alternate; } @keyframes sync-progress { from { transform:translateX(-100%); } to { transform:translateX(430%); } } @media (prefers-reduced-motion:reduce) { .progress-indicator { width:100%; animation:none; opacity:.65; } }
+    .cue { display:grid; grid-template-columns:70px 155px 1fr; gap:10px; padding:9px; border-bottom:1px solid #253346; } .cue:last-child { border:0; } .cue .n { color:var(--muted); } .cue .time { color:#8bd3ff; font-variant-numeric:tabular-nums; } .cue .text { white-space:pre-line; }
+    .pill { display:inline-block; padding:2px 7px; margin-left:7px; border-radius:99px; background:#26364c; color:var(--muted); font-size:12px; }
+    details { margin-top:16px; color:var(--muted); } summary { cursor:pointer; color:var(--text); } details.optional-panel { margin-top:0; } details.optional-panel > summary { font-size:17px; font-weight:700; } .optional-content { padding-top:14px; } @media (max-width:720px) { .grid,.preview-grid{grid-template-columns:1fr}.cue{grid-template-columns:48px 132px 1fr} }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Subtitle Sync</h1>
+  <p>A local, browser-based tool for synchronizing SRT subtitles. Your files are never uploaded.</p>
+  <div class="grid">
+    <section id="targetCard" class="card wide">
+      <h2>Subtitle to correct <span class="pill">used in both modes</span></h2>
+      <p id="targetDescription" class="note">For example, the Hungarian SRT. This is the file that will be adjusted and exported.</p>
+      <input id="targetFile" type="file" accept=".srt,text/plain">
+      <div id="targetInfo" class="status"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Extract subtitle from MKV <span class="pill">MKVToolNix</span></h2>
+      <p class="note">Install MKVToolNix automatically or set its location once. The app saves it locally and checks it at every launch. Then select an MKV and load a subtitle track as reference or target, or download it as an SRT without loading it. The video remains on your computer; extraction is local.</p>
+      <div class="row"><button id="installMkvToolNix" class="secondary">Install MKVToolNix automatically</button><button id="chooseTools" class="secondary">Set MKVToolNix location...</button><button id="chooseMkv" class="secondary">Choose MKV...</button></div>
+      <div id="toolStatus" class="status"></div>
+      <div id="mkvStatus" class="status"></div>
+      <div id="mkvTracks" class="note"></div>
+    </section>
+
+    <section class="card wide">
+      <h2>Sync method</h2>
+      <div class="mode-switch" role="tablist" aria-label="Synchronization method"><button id="referenceMode" class="active" role="tab" aria-selected="true">Reference subtitle manual sync</button><button id="audioMode" class="secondary" role="tab" aria-selected="false">Video audio auto-sync</button></div>
+      <p id="modeDescription" class="note">Uses the reference subtitle for automatic re-sync or the manual timing controls below. The selected video is not used in this mode.</p>
+      <div id="syncModeContent">
+        <div data-mode="audio" class="hidden">
+          <h2>Automatic sync to video <span class="pill">ffsubsync</span></h2>
+          <p class="note">Uses the video audio's speech/silence pattern to align the loaded target SRT. This is language-independent, runs locally, and creates a corrected copy for preview. Select the MKV first, then load or extract the target subtitle. The automatic installer downloads Python, ffsubsync, and FFmpeg once; syncing itself stays local.</p>
+          <div class="row"><button id="installAutoSync" class="secondary">Install sync engine automatically</button><button id="chooseAutoSync" class="secondary">Set ffsubsync location...</button><button id="runAutoSync" class="good">Auto sync loaded subtitle</button></div>
+          <div id="autoSyncProgress" class="progress-track" role="progressbar" aria-label="Automatic subtitle synchronization" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
+          <div id="autoSyncStatus" class="status"></div>
+        </div>
+        <div data-mode="reference">
+          <h2>Reference subtitle manual sync</h2>
+            <p class="note">Load a correctly timed reference subtitle here. The local multilingual model matches the meaning of the English and Hungarian lines, then aligns their timing. Your files stay on this computer.</p>
+          <label for="referenceFile">Reference subtitle</label>
+          <input id="referenceFile" type="file" accept=".srt,text/plain">
+          <div id="referenceInfo" class="status"></div>
+          <div class="row"><button id="installTextModel" class="secondary">Install local text model</button><button id="runTextSync" class="good" disabled>AI re-sync to reference</button><button id="runPatternSync" class="secondary">Speech-pattern fallback</button></div>
+          <div id="textModelInstallProgress" class="progress-track" role="progressbar" aria-label="Installing local text model" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
+          <div id="textModelStatus" class="status" aria-live="polite">Checking local text model...</div>
+          <div id="textSyncProgress" class="progress-track" role="progressbar" aria-label="AI reference subtitle synchronization" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
+          <div id="textSyncStatus" class="status" aria-live="polite"></div>
+          <div id="patternSyncProgress" class="progress-track" role="progressbar" aria-label="Speech-pattern reference subtitle synchronization" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
+          <div id="patternSyncStatus" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <details class="card wide optional-panel">
+      <summary>3. Global offset <span class="pill">optional</span></summary>
+      <div class="optional-content"><div class="row"><div><label for="offset">Offset (ms)</label><input id="offset" type="number" value="0" step="100"></div><div class="note">Positive: moves the subtitle later.<br>Negative: moves it earlier.<br>If both first cues describe the same moment, use the automatic button.</div><button id="detectOffset" class="secondary">Set offset from first cue</button><button id="applyOffset" class="secondary">Refresh preview</button></div></div>
+    </details>
+
+    <details class="card wide optional-panel">
+      <summary>4. Gradual timing correction <span class="pill">optional · linear drift</span></summary>
+      <div class="optional-content"><p class="note">If timing is correct at the beginning but drifts by the end, choose two matching scenes. The app gradually adjusts timing between the first and last anchor, and continues with the same rate outside them.</p>
+      <div class="row">
+        <div><label for="sourceStart">Target anchor 1</label><input id="sourceStart" type="text" placeholder="00:05:12,500"></div>
+        <div><label for="destStart">Reference anchor 1</label><input id="destStart" type="text" placeholder="00:05:10,000"></div>
+        <div><label for="sourceEnd">Target anchor 2</label><input id="sourceEnd" type="text" placeholder="00:42:00,000"></div>
+        <div><label for="destEnd">Reference anchor 2</label><input id="destEnd" type="text" placeholder="00:41:55,000"></div>
+        <button id="applyDrift" class="secondary">Apply drift correction</button>
+      </div>
+      <div class="note">Time format: <code>HH:MM:SS,mmm</code> or seconds (for example <code>312.5</code>). The global offset is applied as well.</div></div>
+    </details>
+
+    <section class="card wide">
+      <div class="row"><div><h2>Preview: corrected subtitle</h2><div id="previewSummary" class="note">Load an SRT subtitle to correct.</div></div><button id="export" class="good" disabled>Save corrected SRT</button></div>
+      <div class="note">Reference and target cue numbers are independent. Recaps and different line breaks can make the same-numbered rows refer to different moments.</div>
+      <div id="previewGrid" class="preview-grid">
+        <div id="referencePreviewColumn"><div class="preview-title">Reference (original timing)</div><div id="referencePreview" class="preview"></div></div>
+        <div><div class="preview-title">Target (corrected timing)</div><div id="preview" class="preview" aria-live="polite"></div></div>
+      </div>
+      <div id="message" class="status"></div>
+      <details><summary>Usage tip</summary>First, use a recognizable early line to set a global offset. Then check the middle and end of the video. If the error keeps growing, use two anchors. Different releases may have a different intro, ad break, or cut; in those cases, linear correction may not fix every point and manual changes may be needed.</details>
+    </section>
+  </div>
+</main>
+<script>
+(() => {
+  let reference = [], original = [], rawReferenceText = '', rawTargetText = '', filename = 'corrected-subtitle.srt';
+  const $ = id => document.getElementById(id);
+  function resetSyncMessages() { ['autoSyncStatus','textSyncStatus','patternSyncStatus','message'].forEach(id=>{ $(id).textContent=''; $(id).className='status'; }); ['autoSyncProgress','textSyncProgress','patternSyncProgress'].forEach(id=>$(id).hidden=true); }
+  function setMode(mode) { const audio=mode==='audio'; $('syncModeContent').querySelectorAll('[data-mode]').forEach(el=>el.classList.toggle('hidden',el.dataset.mode!==mode)); $('audioMode').classList.toggle('active',audio); $('audioMode').classList.toggle('secondary',!audio); $('referenceMode').classList.toggle('active',!audio); $('referenceMode').classList.toggle('secondary',audio); $('audioMode').setAttribute('aria-selected',String(audio)); $('referenceMode').setAttribute('aria-selected',String(!audio)); $('modeDescription').textContent=audio?'Recommended: uses the selected video\'s audio to automatically align the target subtitle. A reference subtitle is not needed.':'Uses the reference subtitle and the manual timing controls elsewhere on this page. The video and auto-sync engine are not used.'; }
+  const fmt = ms => { ms = Math.max(0, Math.round(ms)); const h=Math.floor(ms/3600000); ms%=3600000; const m=Math.floor(ms/60000); ms%=60000; const s=Math.floor(ms/1000); ms%=1000; return [h,m,s].map((v,i)=>i===0?String(v).padStart(2,'0'):String(v).padStart(2,'0')).join(':')+','+String(ms).padStart(3,'0'); };
+  const parseTime = value => { const v=value.trim(); if (!v) return null; if (/^-?\d+(?:[.,]\d+)?$/.test(v)) return Math.round(Number(v.replace(',','.'))*1000); const m=v.match(/^(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})$/); if (!m) return null; return ((+m[1]*3600 + +m[2]*60 + +m[3])*1000) + +m[4].padEnd(3,'0'); };
+  function parseSrt(text) { const clean=text.replace(/^\uFEFF/,'').replace(/\r/g,'').trim(); if (!clean) return []; return clean.split(/\n{2,}/).map((block, idx) => { const lines=block.split('\n'); const line=lines.findIndex(x => x.includes('-->')); if(line<0) return null; const t=lines[line].match(/(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/); if(!t) return null; return {id: idx+1, start:parseTime(t[1]), end:parseTime(t[2]), text:lines.slice(line+1).join('\n')}; }).filter(Boolean); }
+  const read = async file => parseSrt(await file.text());
+  function loadSrtText(text, name, kind) { resetSyncMessages(); const cues=parseSrt(text); if(!cues.length) throw new Error('No valid SRT entries were found.'); if(kind==='reference') { reference=cues; rawReferenceText=text; $('referenceInfo').textContent=`${name}: ${cues.length} entries loaded`; } else if(kind==='target') { original=cues; rawTargetText=text; filename=name.replace(/\.srt$/i,'')+'-synced.srt'; $('targetInfo').textContent=`${name}: ${cues.length} entries loaded`; $('export').disabled=false; } else { throw new Error('Choose whether to load the subtitle as a reference or target.'); } render(); }
+  async function load(file, kind) { if(!file) return; resetSyncMessages(); try { loadSrtText(await file.text(),file.name,kind); } catch(e) { $('message').textContent=e.message; $('message').className='status warning'; } }
+  function transform(cue) { let start=cue.start, end=cue.end; const off=Number($('offset').value)||0, a=parseTime($('sourceStart').value), b=parseTime($('destStart').value), c=parseTime($('sourceEnd').value), d=parseTime($('destEnd').value); if([a,b,c,d].every(x=>x!==null) && c!==a) { const scale=(d-b)/(c-a); start=b+(start-a)*scale; end=b+(end-a)*scale; } return {...cue,start:start+off,end:end+off}; }
+  function draw(id, cues) { const pane=$(id); pane.replaceChildren(...cues.slice(0,100).map((c,i)=>{ const e=document.createElement('div'); e.className='cue'; e.innerHTML=`<span class="n">${i+1}</span><span class="time">${fmt(c.start)} → ${fmt(c.end)}</span><span class="text"></span>`; e.querySelector('.text').textContent=c.text; return e;})); if(!cues.length) pane.textContent=id==='referencePreview'?'No reference subtitle loaded.':'No subtitle to correct loaded.'; else if(cues.length>100) { const e=document.createElement('div'); e.className='cue note'; e.textContent=`Only the first 100 entries are shown (${cues.length} total).`; pane.append(e); } }
+  function render() { const out=original.map(transform); $('previewSummary').textContent=out.length?`${out.length} entries · first: ${fmt(out[0].start)} · last: ${fmt(out[out.length-1].end)}`:'Load an SRT subtitle to correct.'; draw('referencePreview',reference); draw('preview',out); }
+  function validAnchors() { const values=['sourceStart','destStart','sourceEnd','destEnd'].map(id=>parseTime($(id).value)); return values.every(x=>x!==null) && values[2]!==values[0]; }
+  function loadSyncedTarget(text, name) { loadSrtText(text,name,'target'); $('offset').value='0'; ['sourceStart','destStart','sourceEnd','destEnd'].forEach(id=>$(id).value=''); render(); }
+  $('referenceFile').addEventListener('change', e=>load(e.target.files[0],'reference'));
+  $('targetFile').addEventListener('change', e=>load(e.target.files[0],'target'));
+  $('audioMode').onclick=()=>setMode('audio');
+  $('referenceMode').onclick=()=>{ setMode('reference'); $('modeDescription').textContent='Uses the reference subtitle for automatic re-sync or the manual timing controls below. The selected video is not used in this mode.'; };
+  async function refreshToolStatus() { const status=$('toolStatus'); try { const r=await fetch('/api/tool-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.folder}`:data.message; status.className=data.configured?'status':'status warning'; } catch { status.textContent='Start the application with Inditas.bat to configure MKVToolNix.'; status.className='status warning'; } }
+  async function refreshAutoSyncStatus() { const status=$('autoSyncStatus'); try { const r=await fetch('/api/autosync-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.path}`:data.message; status.className=data.configured?'status':'status warning'; } catch { status.textContent='Start the application with Inditas.bat to configure ffsubsync.'; status.className='status warning'; } }
+  async function refreshTextSyncStatus() { const status=$('textModelStatus'), button=$('runTextSync'); try { const r=await fetch('/api/textsync-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.model||''}`:data.message; status.className=data.configured?'status':'status warning'; button.disabled=!data.configured; } catch { status.textContent='Start the application with Inditas.bat to configure the local text model.'; status.className='status warning'; button.disabled=true; } }
+  $('installMkvToolNix').onclick=async()=>{ const status=$('toolStatus'), button=$('installMkvToolNix'); button.disabled=true; status.textContent='Downloading the official MKVToolNix installer. Complete the installer window when it opens...'; status.className='status'; try { const r=await fetch('/api/install-mkvtoolnix',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'MKVToolNix installation failed.'); status.textContent=`${data.message} ${data.folder}`; status.className='status'; } catch(e) { status.textContent=e.message; status.className='status warning'; } finally { button.disabled=false; } };
+  $('chooseTools').onclick=async()=>{ const status=$('toolStatus'); status.textContent='Opening MKVToolNix file picker...'; status.className='status'; try { const r=await fetch('/api/select-tools',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'MKVToolNix selection failed.'); status.textContent=`${data.message} ${data.folder}`; status.className='status'; } catch(e) { status.textContent=e.message; status.className='status warning'; } };
+  $('installAutoSync').onclick=async()=>{ const status=$('autoSyncStatus'), button=$('installAutoSync'); button.disabled=true; status.textContent='Installing local ffsubsync and FFmpeg. Python 3.11 will be installed if needed; this can take a few minutes...'; status.className='status'; try { const r=await fetch('/api/install-autosync',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'Automatic installation failed.'); status.textContent=`${data.message} ${data.path}`; status.className='status'; } catch(e) { status.textContent=e.message; status.className='status warning'; } finally { button.disabled=false; } };
+  $('chooseAutoSync').onclick=async()=>{ const status=$('autoSyncStatus'); status.textContent='Opening ffsubsync file picker...'; status.className='status'; try { const r=await fetch('/api/select-autosync',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'ffsubsync selection failed.'); status.textContent=`${data.message} ${data.path}`; status.className='status'; } catch(e) { status.textContent=e.message; status.className='status warning'; } };
+  $('runAutoSync').onclick=async()=>{
+    const status=$('autoSyncStatus'), button=$('runAutoSync'), progress=$('autoSyncProgress');
+    if(!rawTargetText) { status.textContent='Load or extract the target SRT first.'; status.className='status warning'; return; }
+    button.disabled=true; progress.hidden=false; status.textContent='Analyzing video audio and aligning subtitle...'; status.className='status';
+    try {
+      const r=await fetch('/api/autosync',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({srtText:rawTargetText})});
+      const data=await r.json();
+      if(!r.ok) throw new Error(data.error||'Automatic sync failed.');
+      loadSyncedTarget(data.text,data.name);
+      status.textContent='Automatic sync completed. Previous manual timing corrections were cleared. Review the preview before exporting.'; status.className='status';
+    } catch(e) { status.textContent=e.message; status.className='status warning'; }
+    finally { progress.hidden=true; button.disabled=false; }
+  };
+  $('runTextSync').onclick=async()=>{
+    const status=$('textSyncStatus'), button=$('runTextSync'), progress=$('textSyncProgress');
+    if(!rawReferenceText||!rawTargetText) { status.textContent='Load both a reference subtitle and a target subtitle first.'; status.className='status warning'; return; }
+    button.disabled=true; progress.hidden=false; status.textContent='Matching subtitle meanings and aligning cue timing locally...'; status.className='status';
+    try {
+      const r=await fetch('/api/textsync',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({referenceText:rawReferenceText,srtText:rawTargetText})});
+      const data=await r.json();
+      if(!r.ok) throw new Error(data.error||'AI reference sync failed.');
+      loadSyncedTarget(data.text,data.name);
+      status.textContent=`AI sync completed: ${data.matchedGroups} text groups matched, average similarity ${data.averageSimilarity}. Previous manual timing corrections were cleared; review before exporting.`; status.className='status';
+    } catch(e) { status.textContent=e.message; status.className='status warning'; }
+    finally { progress.hidden=true; button.disabled=false; }
+  };
+  $('runPatternSync').onclick=async()=>{ const status=$('patternSyncStatus'), button=$('runPatternSync'), progress=$('patternSyncProgress'); if(!rawReferenceText||!rawTargetText) { status.textContent='Load both a reference subtitle and a target subtitle first.'; status.className='status warning'; return; } button.disabled=true; progress.hidden=false; status.textContent='Aligning target subtitle to the reference speech pattern...'; status.className='status'; try { const r=await fetch('/api/autosync-reference',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({referenceText:rawReferenceText,srtText:rawTargetText})}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'Speech-pattern sync failed.'); loadSyncedTarget(data.text,data.name); status.textContent='Speech-pattern sync completed. Previous manual timing corrections were cleared.'; status.className='status'; } catch(e) { status.textContent=e.message; status.className='status warning'; } finally { progress.hidden=true; button.disabled=false; } };
+  $('installTextModel').onclick=async()=>{ const status=$('textModelStatus'), button=$('installTextModel'), progress=$('textModelInstallProgress'); button.disabled=true; progress.hidden=false; status.textContent='Installing local runtime packages and downloading the 471 MB multilingual model once. No subtitle data is uploaded.'; status.className='status'; try { const r=await fetch('/api/install-textsync',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'Local text model installation failed.'); status.textContent=`${data.message} ${data.model||''}`; status.className='status'; $('runTextSync').disabled=false; } catch(e) { status.textContent=e.message; status.className='status warning'; } finally { progress.hidden=true; button.disabled=false; } };
+  $('detectOffset').onclick=()=>{ if(!reference.length||!original.length) { $('message').textContent='Load both a reference and a target subtitle first.'; $('message').className='status warning'; return; } const detected=reference[0].start-original[0].start; $('offset').value=detected; render(); const sign=detected>=0?'+':''; $('message').textContent=`Offset set from the first cue: ${sign}${(detected/1000).toFixed(3)} s. Check the middle and end of the video; use anchors if it gradually drifts.`; $('message').className='status'; };
+  $('applyOffset').onclick=()=>{render(); $('message').textContent='Preview updated.'; $('message').className='status';};
+  $('applyDrift').onclick=()=>{ if(!validAnchors()) { $('message').textContent='Enter all four anchors in a valid format; the two target times cannot be identical.'; $('message').className='status warning'; return; } render(); $('message').textContent='Gradual correction is shown in the preview.'; $('message').className='status'; };
+  function downloadSrt(name, text) { const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})); const link=document.createElement('a'); link.href=url; link.download=name; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
+  $('chooseMkv').onclick=async()=>{ resetSyncMessages(); const status=$('mkvStatus'), tracks=$('mkvTracks'); status.textContent='Opening MKVToolNix and file picker...'; status.className='status'; tracks.replaceChildren(); try { const r=await fetch('/api/select-mkv',{method:'POST'}); const data=await r.json(); if(!r.ok) throw new Error(data.error||'MKV selection failed.'); status.textContent=`${data.name}: ${data.tracks.length} subtitle tracks found`; for(const track of data.tracks) { const row=document.createElement('div'); row.className='row'; const label=document.createElement('div'); label.className='note'; label.textContent=`#${track.id} · ${track.language||'unknown language'} · ${track.codec||'subtitle'}${track.name?' · '+track.name:''}`; const ref=document.createElement('button'); ref.className='secondary'; ref.textContent='Load as reference'; const target=document.createElement('button'); target.className='secondary'; target.textContent='Load as target'; const download=document.createElement('button'); download.className='secondary'; download.textContent='Download SRT'; const extract=async kind=>{ resetSyncMessages(); status.textContent='Extracting subtitle...'; status.className='status'; const x=await fetch('/api/extract',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackId:track.id})}); const out=await x.json(); if(!x.ok) throw new Error(out.error||'Extraction failed.'); if(kind==='download') { downloadSrt(out.name,out.text); status.textContent=`Downloaded: ${out.name}`; } else { loadSrtText(out.text,out.name,kind); status.textContent=`Loaded as ${kind}: ${out.name}`; } }; ref.onclick=()=>extract('reference').catch(e=>{status.textContent=e.message;status.className='status warning';}); target.onclick=()=>extract('target').catch(e=>{status.textContent=e.message;status.className='status warning';}); download.onclick=()=>extract('download').catch(e=>{status.textContent=e.message;status.className='status warning';}); row.append(label,ref,target,download); tracks.append(row); } } catch(e) { status.textContent=e.message+' Start the application with Inditas.bat.'; status.className='status warning'; } };
+  $('export').onclick=()=>{ if(!original.length) return; if(['sourceStart','destStart','sourceEnd','destEnd'].some(id=>$(id).value.trim())&&!validAnchors()) { $('message').textContent='Before exporting, fill all anchors correctly or clear the anchor fields.'; $('message').className='status warning'; return; } const s=original.map(transform).map((c,i)=>`${i+1}\n${fmt(c.start)} --> ${fmt(c.end)}\n${c.text}`).join('\r\n\r\n')+'\r\n'; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([s],{type:'text/plain;charset=utf-8'})); a.download=filename; a.click(); URL.revokeObjectURL(a.href); $('message').textContent=`Saved: ${filename}`; $('message').className='status'; };
+  refreshToolStatus();
+  refreshAutoSyncStatus();
+  refreshTextSyncStatus();
+  setMode('reference');
+  $('modeDescription').textContent='Uses the reference subtitle for automatic re-sync or the manual timing controls below. The selected video is not used in this mode.';
+})();
+</script>
+</body>
+</html>
