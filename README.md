@@ -41,6 +41,32 @@ The app works with text-based SRT/SubRip tracks. Image-based PGS/VobSub and form
 
 The app reports how many text groups it matched and their average similarity. If it cannot find enough confident matches, it reports an error; use **Speech-pattern fallback** instead. Subtitle text is not sent to a remote service. A successful automatic sync clears any previous manual offset and drift anchors so those corrections are not applied twice.
 
+## Local AI subtitle translation
+
+**Local AI subtitle translation** translates the loaded target SRT; it is separate from AI reference synchronization. Choose a source language or leave it on auto-detect, then select a target language. English and Hungarian are available along with Spanish, German, and French.
+
+1. Choose **Qwen3 8B** for the recommended quality or **Qwen3 4B** for a smaller model.
+2. Click **Set up local translator**. The app reuses an Ollama service that is already running. If Ollama is installed but stopped, the app starts it. If it is not installed, the app downloads the official portable Windows runtime into `%LOCALAPPDATA%\SubtitleSync\ollama`, verifies its SHA-256 checksum, and starts it. The selected model is downloaded automatically as part of setup.
+3. Review or edit the show glossary, then click **Translate target subtitle**. Translation runs in 12-cue batches with up to three neighboring cues on either side for context.
+4. Review the translated preview and click **Save corrected SRT** to export.
+
+The translator preserves cue numbering and timestamps, protects speaker labels and SRT formatting tags, and validates the structured response before accepting each batch. If any batch is incomplete or changes protected content, the app reports an error instead of loading a partial result. Original files are never overwritten. Translation prompts and results are sent only to the local Ollama API; the model itself is downloaded from the official Ollama distribution on first setup.
+
+The first setup can download about 1.5 GB for the portable Ollama runtime and about 5.2 GB for Qwen3 8B; Qwen3 4B is smaller. **Download selected model** and **Remove selected model** let you manage models from the app. If an existing Ollama service is reused, these actions use its shared model library; deleting a model there also removes it for other apps that use that Ollama service. The app-managed portable runtime keeps its models in the Subtitle Sync app-data folder.
+
+## Local AI subtitle translation
+
+The **Local AI subtitle translation** panel translates the loaded target SRT while keeping its original cue IDs and timestamps. Source language can be auto-detected or selected as English, Hungarian, Spanish, German, or French; choose the target language separately.
+
+1. Choose **Qwen3 8B** (recommended) or the smaller **Qwen3 4B**.
+2. Click **Set up local translator**. The app reuses a running local Ollama service if available. Otherwise it downloads the official portable Windows runtime into `%LOCALAPPDATA%\SubtitleSync\ollama`, verifies its SHA-256 checksum, and starts it locally. The selected model is then downloaded by the app.
+3. Edit the show glossary/context if needed, then click **Translate target subtitle**.
+4. Review the translated preview and export with **Save corrected SRT**.
+
+The translator sends 12 cues per request with up to three neighboring cues on each side as context. Glossary entries, speaker labels, cue IDs, and formatting tags are protected or validated. If a batch fails or the model changes cue IDs/tags, the app reports an error instead of loading a partial translation. Original SRT files are not overwritten.
+
+First-time setup can require about 1.5 GB for the portable Ollama runtime and about 5.2 GB for Qwen3 8B; the smaller 4B model uses less space. Both setup and download can be started in the app. If an existing Ollama installation is reused, its models are in that Ollama installation's shared model store, so removing a model from the app removes it from that active store. With the app-managed runtime, models are kept under the Subtitle Sync app-data folder. Subtitle content stays local in either case.
+
 ## Speech-pattern fallback
 
 **Speech-pattern fallback** uses local `ffsubsync` to align the target's speech/silence timing pattern to the reference SRT. This is useful when semantic text matching finds too few reliable pairs. It does not use the selected MKV video, but it requires the local sync engine (`ffsubsync` and FFmpeg).
@@ -110,6 +136,32 @@ Az alkalmazás szöveges SRT/SubRip sávokkal működik. A képalapú PGS/VobSub
 4. Ellenőrizd az eredményt, majd a **Save corrected SRT** gombbal exportáld.
 
 Az alkalmazás jelzi az egyező szövegcsoportok számát és átlagos hasonlóságát. Ha nincs elég biztos egyezés, hibát jelez; ilyenkor használd a **Speech-pattern fallback** módot. A feliratszöveg nem kerül távoli szolgáltatáshoz. Sikeres automatikus szinkron törli a korábbi kézi offsetet és drift-horgonyokat, hogy ne alkalmazza őket kétszer.
+
+## Helyi AI-feliratfordítás
+
+A **Local AI subtitle translation** a betöltött célfeliratot fordítja; ez külön funkció az AI referencia-alapú időzítés-szinkrontól. Válassz forrásnyelvet, vagy hagyd automatikus felismerésen, majd válaszd ki a célnyelvet. Angol, magyar, spanyol, német és francia érhető el.
+
+1. Válaszd a jobb minőségre ajánlott **Qwen3 8B** modellt, vagy a kisebb **Qwen3 4B** modellt.
+2. Kattints a **Set up local translator** gombra. Az alkalmazás újrahasználja a már futó Ollamát; ha telepítve van, de nem fut, elindítja. Ha nincs telepítve, letölti a hivatalos hordozható Windows-futtatót a `%LOCALAPPDATA%\SubtitleSync\ollama` mappába, SHA-256-tal ellenőrzi, elindítja, majd letölti a kiválasztott modellt.
+3. Ellenőrizd vagy szerkeszd a sorozat szójegyzékét, majd kattints a **Translate target subtitle** gombra. A fordítás 12 cue-s batch-ekben fut, mindkét oldalon legfeljebb három szomszédos cue kontextusával.
+4. Ellenőrizd az előnézetet, majd exportáld a **Save corrected SRT** gombbal.
+
+A fordító megőrzi a cue-számozást és időbélyegeket, védi a beszélőcímkéket és az SRT-formázó tageket, és minden batch strukturált válaszát ellenőrzi. Hiányos batch vagy módosított védett tartalom esetén hibát jelez, és nem tölt be részleges fordítást. Az eredeti fájlt nem írja felül. A promptok és a válaszok csak a helyi Ollama API-hoz kerülnek; maga a modell az első beállításkor az Ollama hivatalos terjesztéséből töltődik le.
+
+Az első beállítás kb. 1,5 GB hordozható Ollama-futtatót és kb. 5,2 GB Qwen3 8B modellt tölthet le; a Qwen3 4B kisebb. A **Download selected model** és **Remove selected model** gombokkal az appból kezelhetők a modellek. Már futó Ollama használatakor ezek annak közös modellkönyvtárára hatnak; törléskor az adott modell más Ollama-alkalmazások számára is eltűnik. Az app által kezelt hordozható futtató a saját modelljeit a Subtitle Sync alkalmazásadat-mappájában tartja.
+
+## Helyi AI-feliratfordítás
+
+A **Local AI subtitle translation** panel a betöltött célfeliratot fordítja le, az eredeti cue-azonosítók és időbélyegek megtartásával. A forrásnyelv automatikusan felismerhető, vagy megadható angol, magyar, spanyol, német és francia nyelv; a célnyelvet külön választhatod.
+
+1. Válaszd a **Qwen3 8B** modellt (ajánlott), vagy a kisebb **Qwen3 4B** modellt.
+2. Kattints a **Set up local translator** gombra. Az alkalmazás újrahasználja a már futó helyi Ollamát, ha van. Ha nincs, letölti a hivatalos hordozható Windows-futtatót a `%LOCALAPPDATA%\SubtitleSync\ollama` könyvtárba, ellenőrzi az SHA-256 ellenőrzőösszegét, majd helyben elindítja. Ezután az alkalmazás letölti a kiválasztott modellt.
+3. Szükség esetén szerkeszd a sorozat szójegyzékét és kontextusát, majd kattints a **Translate target subtitle** gombra.
+4. Ellenőrizd a fordított előnézetet, majd mentsd a **Save corrected SRT** gombbal.
+
+A fordító kérésenként 12 cue-t küld, oldalanként legfeljebb három szomszédos sort adva kontextusként. A szójegyzék, a beszélőcímkék, a cue-azonosítók és a formázó tagek védettek vagy ellenőrzöttek. Ha egy batch hibázik, vagy a modell megváltoztatja az azonosítókat/tageket, az alkalmazás hibát jelez, és nem tölt be részleges fordítást. Az eredeti SRT-fájlt nem írja felül.
+
+Az első beállítás kb. 1,5 GB futtatókörnyezetet és kb. 5,2 GB Qwen3 8B modellt igényelhet; a kisebb 4B modell kevesebb helyet foglal. A futtatókörnyezet és a modell is az alkalmazáson belül tölthető le. Meglévő Ollama használatakor a modellek annak közös modellkönyvtárába kerülnek, így az alkalmazásból törölt modell abból az aktív Ollama-könyvtárból is törlődik. Az app-managed futtató saját modelleket tart a Subtitle Sync alkalmazásadat-mappájában. A felirat tartalma egyik esetben sem kerül felhőbe.
 
 ## Beszédmintás tartalék mód
 
