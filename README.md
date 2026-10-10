@@ -1,5 +1,7 @@
 # Felirat Szinkron
 
+[English](README.en.md) | Magyar
+
 Egyszerű, teljesen helyben futó Windows-os eszköz `.srt` feliratok időzítéséhez és MKV-ból történő feliratkinyeréshez. Nincs felhő vagy feltöltés: a helyi segédprogram csak a saját gépeden fut.
 
 ## Indítás
