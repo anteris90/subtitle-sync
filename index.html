@@ -68,10 +68,10 @@
           <div id="patternSyncStatus" class="status" aria-live="polite"></div>
           <hr>
           <h3>Local AI subtitle translation</h3>
-          <p class="note">The app manages Ollama and the selected model locally. First-time setup may download about 1.5 GB for the runtime and 5.2 GB for Qwen3 8B. Translation runs in context-aware batches; original cue timing is preserved.</p>
+          <p class="note">No Hungarian SRT? Load the source-language SRT or MKV track as the target above, choose Hungarian below, and translate. The app manages Ollama and the model locally. Translation runs in context-aware batches and preserves the original cue timing.</p>
           <div class="row">
-            <div><label for="translationModel">Translation model</label><select id="translationModel"><option value="qwen3:8b">Qwen3 8B · recommended</option><option value="qwen3:4b">Qwen3 4B · smaller</option></select></div>
-            <div><label for="translationSourceLanguage">Source language</label><select id="translationSourceLanguage"><option>Auto-detect</option><option>English</option><option>Hungarian</option><option>Spanish</option><option>German</option><option>French</option></select></div>
+            <div><label for="translationModel">Translation model</label><select id="translationModel"><option value="translategemma:12b">TranslateGemma 12B · recommended</option><option value="translategemma:4b">TranslateGemma 4B · smaller</option><option value="qwen3:8b">Qwen3 8B · general model</option><option value="qwen3:4b">Qwen3 4B · general model, smaller</option></select></div>
+            <div><label for="translationSourceLanguage">Source language</label><select id="translationSourceLanguage"><option>English</option><option>Auto-detect</option><option>Hungarian</option><option>Spanish</option><option>German</option><option>French</option><option>Italian</option><option>Polish</option><option>Romanian</option></select></div>
             <div><label for="translationTargetLanguage">Target language</label><select id="translationTargetLanguage"><option>Hungarian</option><option>English</option><option>Spanish</option><option>German</option><option>French</option></select></div>
           </div>
           <label for="translationGlossary">Show glossary and translation context</label>
