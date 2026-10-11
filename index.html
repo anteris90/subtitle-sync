@@ -44,7 +44,7 @@
     <section class="card wide">
       <h2>Sync method</h2>
       <div class="mode-switch" role="tablist" aria-label="Synchronization method"><button id="referenceMode" class="active" role="tab" aria-selected="true">Reference subtitle manual sync</button><button id="audioMode" class="secondary" role="tab" aria-selected="false">Video audio auto-sync</button></div>
-      <p id="modeDescription" class="note">Uses the reference subtitle for automatic re-sync or the manual timing controls below. The selected video is not used in this mode.</p>
+      <p id="modeDescription" class="note">Reference mode aligns the timing of an already-loaded target; it does not translate. To create Hungarian subtitles from English, load the English SRT as the target and use Local AI subtitle translation below.</p>
       <div id="syncModeContent">
         <div data-mode="audio" class="hidden">
           <h2>Automatic sync to video <span class="pill">ffsubsync</span></h2>
@@ -54,12 +54,12 @@
           <div id="autoSyncStatus" class="status"></div>
         </div>
         <div data-mode="reference">
-          <h2>Reference subtitle manual sync</h2>
-            <p class="note">Load a correctly timed reference subtitle here. The local multilingual model matches the meaning of the English and Hungarian lines, then aligns their timing. Your files stay on this computer.</p>
+          <h2>Reference subtitle timing</h2>
+            <p class="note">Load a correctly timed reference subtitle here, then align the already-loaded target's cue timing to it. This does not translate subtitle text. For a new Hungarian subtitle, load the English source as the target and translate it in the Local AI subtitle translation panel below.</p>
           <label for="referenceFile">Reference subtitle</label>
           <input id="referenceFile" type="file" accept=".srt,text/plain">
           <div id="referenceInfo" class="status"></div>
-          <div class="row"><button id="installTextModel" class="secondary">Install local text model</button><button id="runTextSync" class="good" disabled>AI re-sync to reference</button><button id="runPatternSync" class="secondary">Speech-pattern fallback</button></div>
+          <div class="row"><button id="installTextModel" class="secondary">Install local text model</button><button id="runTextSync" class="good" disabled>Align target to reference</button><button id="runPatternSync" class="secondary">Speech-pattern fallback</button></div>
           <div id="textModelInstallProgress" class="progress-track" role="progressbar" aria-label="Installing local text model" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
           <div id="textModelStatus" class="status" aria-live="polite">Checking local text model...</div>
           <div id="textSyncProgress" class="progress-track" role="progressbar" aria-label="AI reference subtitle synchronization" aria-valuetext="In progress" hidden><div class="progress-indicator"></div></div>
@@ -136,7 +136,7 @@ Keep character names unchanged.</textarea>
   $('referenceFile').addEventListener('change', e=>load(e.target.files[0],'reference'));
   $('targetFile').addEventListener('change', e=>load(e.target.files[0],'target'));
   $('audioMode').onclick=()=>setMode('audio');
-  $('referenceMode').onclick=()=>{ setMode('reference'); $('modeDescription').textContent='Uses the reference subtitle for automatic re-sync or the manual timing controls below. The selected video is not used in this mode.'; };
+  $('referenceMode').onclick=()=>{ setMode('reference'); $('modeDescription').textContent='Reference mode aligns the timing of an already-loaded target; it does not translate. To create Hungarian subtitles from English, load the English SRT as the target and use Local AI subtitle translation below.'; };
   async function refreshToolStatus() { const status=$('toolStatus'); try { const r=await fetch('/api/tool-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.folder}`:data.message; status.className=data.configured?'status':'status warning'; } catch { status.textContent='Start the application with Inditas.bat to configure MKVToolNix.'; status.className='status warning'; } }
   async function refreshAutoSyncStatus() { const status=$('autoSyncStatus'); try { const r=await fetch('/api/autosync-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.path}`:data.message; status.className=data.configured?'status':'status warning'; } catch { status.textContent='Start the application with Inditas.bat to configure ffsubsync.'; status.className='status warning'; } }
   async function refreshTextSyncStatus() { const status=$('textModelStatus'), button=$('runTextSync'); try { const r=await fetch('/api/textsync-status'); const data=await r.json(); status.textContent=data.configured?`${data.message} ${data.model||''}`:data.message; status.className=data.configured?'status':'status warning'; button.disabled=!data.configured; } catch { status.textContent='Start the application with Inditas.bat to configure the local text model.'; status.className='status warning'; button.disabled=true; } }
